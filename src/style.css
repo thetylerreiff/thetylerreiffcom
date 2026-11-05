@@ -1,0 +1,163 @@
+/* A plain text file on the left, a gold pipeline on the right. */
+
+:root {
+  --bg: #101012;
+  --text: #c9c9ce;
+  --hi: #f2f2f4;
+  --mute: #7c7c84;
+  --line: #3a3a40;
+  --link: #8c8cff;
+  --tag-bg: #ececec;
+  --tag-fg: #101012;
+  --gilt: #e8cf8a;
+  --gut: clamp(16px, 3vw, 32px);
+  --font: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+* { margin: 0; padding: 0; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+  line-height: 1.9;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: clip;
+}
+a { color: var(--link); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+a:hover { color: var(--hi); }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+:focus-visible { outline: 1px solid var(--link); outline-offset: 3px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.skip { position: fixed; left: 12px; top: -60px; z-index: 10; background: var(--hi); color: var(--bg); padding: 6px 10px; }
+.skip:focus { top: 12px; }
+.mute { color: var(--mute); }
+
+#gl { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+
+/* Header: the identity block on the left, bracket links on the right. */
+.top { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; padding: 28px var(--gut) 0; line-height: 1.55; text-transform: uppercase; }
+.id { color: var(--hi); font-size: 12px; letter-spacing: .02em; }
+.cursor { animation: blink 1.1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.links { display: flex; flex-direction: column; align-items: flex-end; font-size: 12px; }
+.links a { color: var(--text); text-decoration: none; }
+.links a:hover { color: var(--hi); }
+.look { color: var(--text); white-space: nowrap; }
+.look button { color: var(--mute); }
+.look button:hover { color: var(--hi); }
+.look button[aria-pressed="true"] { color: var(--hi); }
+
+/* Two columns: the text, then the track of objects that runs beside it. */
+.page { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(0, 520px) minmax(0, 560px); justify-content: start; gap: clamp(24px, 5vw, 96px); padding: 0 var(--gut); }
+
+.text { position: sticky; align-self: start; padding: clamp(64px, 12vh, 120px) 0 48px; outline: none; }
+.text > * + * { margin-top: 18px; }
+.text h1, .text h2 { color: var(--hi); font-size: 13px; font-weight: 500; letter-spacing: .02em; margin-top: 44px; }
+.text h1 { margin-top: 26px; font-size: 14.5px; }
+.text strong { color: var(--hi); font-weight: 500; }
+/* Desktop: the passage for the object nearest mid-screen lights up, with a gold rule in the
+   gutter tying it to the gold object beside it. */
+.text .topic { position: relative; transition: color .35s; }
+.text .topic::after { content: ""; position: absolute; left: -14px; top: .2em; height: max(calc(100% - .4em), 2.6em); width: 1px; background: var(--gilt); opacity: 0; transition: opacity .35s; }
+.text .topic.current { color: var(--hi); }
+.text .topic.current::after { opacity: 1; }
+.text p, .dash li { text-wrap: pretty; }
+.ascii { font: inherit; font-size: 12px; line-height: 1.75; overflow-x: auto; color: var(--text); }
+.dash { list-style: none; }
+.dash li { position: relative; padding-left: 2.2ch; }
+.dash li + li { margin-top: 12px; }
+.dash li { line-height: 1.75; }
+.dash li::before { content: "*"; position: absolute; left: 0; color: var(--mute); }
+.foot p + p { margin-top: 18px; }
+
+/* The track. Groups of objects are pinned beside their passages by main.ts; the leads are
+   the wires that run between groups. */
+.track { position: relative; }
+.grp { position: absolute; left: 0; right: 0; display: flex; flex-direction: column; align-items: center; }
+.st { position: relative; width: min(100%, 210px); }
+.view { aspect-ratio: 1; width: 100%; }
+.st-hero { width: min(100%, 380px); }
+.st-tall { width: min(100%, 250px); }
+.st-tall .view { aspect-ratio: 4 / 5; }
+.st-box { width: min(100%, 290px); }
+.st-coin { width: min(100%, 340px); }
+.st-signal { width: min(100%, 280px); }
+.st-signal .view { aspect-ratio: 1; }
+
+/* A lead: a hollow node at the top, a dashed run, an arrowhead at the bottom. */
+.lead {
+  position: absolute; left: calc(50% - 5.5px); width: 11px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 11 7'%3E%3Cpath d='M1 1l4.5 5L10 1' fill='none' stroke='%237c7c84'/%3E%3C/svg%3E") 50% 100% / 11px 7px no-repeat;
+}
+.lead::before { content: ""; position: absolute; left: 5px; top: 10px; bottom: 1px; border-left: 1px dashed var(--mute); }
+.lead::after { content: ""; position: absolute; left: 1px; top: 0; width: 9px; height: 9px; border: 1px solid var(--mute); border-radius: 50%; }
+/* A gold bead runs down each wire: the pipeline is flowing. */
+.bead { position: absolute; left: 3px; top: 12px; width: 5px; height: 5px; border-radius: 50%; background: var(--gilt); box-shadow: 0 0 6px rgba(232, 207, 138, .7); animation: flow 2.8s cubic-bezier(.45, 0, .55, 1) infinite; }
+@keyframes flow { 0% { top: 12px; opacity: 0; } 12% { opacity: 1; } 88% { opacity: 1; } 100% { top: calc(100% - 10px); opacity: 0; } }
+
+/* Captions: main.ts hangs each one from a point on its object so the tail touches it. */
+.tag { position: absolute; z-index: 2; background: var(--tag-bg); color: var(--tag-fg); font-size: 9.5px; font-weight: 500; line-height: 1.4; letter-spacing: .04em; padding: 4px 7px; white-space: nowrap; text-transform: uppercase; }
+.tag::after { content: ""; position: absolute; border: 4px solid transparent; }
+.tag-l { right: 80%; top: 6%; }
+.tag-l::after { top: 100%; right: 10px; border-top-color: var(--tag-bg); }
+.tag-r { left: 70%; bottom: 8%; }
+.tag-r::after { bottom: 100%; left: 10px; border-bottom-color: var(--tag-bg); }
+.tag-l.flip::after { top: auto; right: auto; bottom: 100%; left: 10px; border-top-color: transparent; border-bottom-color: var(--tag-bg); }
+.tag-r.flip::after { bottom: auto; left: auto; top: 100%; right: 10px; border-bottom-color: transparent; border-top-color: var(--tag-bg); }
+
+.ring { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; animation: spin 70s linear infinite; }
+.ring text { fill: var(--text); font-size: 6px; letter-spacing: .08em; paint-order: stroke; stroke: var(--bg); stroke-width: .7px; stroke-linejoin: round; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* The coin is the way to say hello. */
+.coin-link { position: absolute; inset: 12%; border-radius: 50%; }
+.coin-link:focus-visible { outline-offset: 6px; }
+.coin-link, .st-coin .tag { cursor: pointer; }
+
+/* The work history: an ASCII table where there is room, a plain list on phones. */
+.work-list { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; list-style: none; }
+.mslot { display: none; }
+
+/* The leader: a faint dashed line from the lit passage across to its object's caption. */
+#leader { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; overflow: visible; }
+#leader polyline { fill: none; stroke: var(--mute); stroke-width: 1; stroke-dasharray: 2 4; opacity: 0; transition: opacity .35s; }
+#leader polyline.on { opacity: .8; }
+#leader circle { fill: var(--gilt); opacity: 0; transition: opacity .35s; }
+#leader circle.on { opacity: 1; }
+
+/* Phones: the hero opens the page; the rest of the story follows the text, in order. */
+@media (max-width: 860px) {
+  #leader { display: none; }
+  .page { display: flex; flex-direction: column; overflow-x: clip; }
+  .text { min-width: 0; }
+  .track { display: contents; }
+  .grp { position: static; margin: 32px 0 56px; }
+  .grp:first-child { order: -1; margin: 24px 0 12px; }
+  .grp:first-child .st-hero { width: min(100%, 320px); }
+  .mslot { display: block; }
+  .ascii { display: none; }
+  .work-list { position: static; width: auto; height: auto; overflow: visible; clip-path: none; white-space: normal; }
+  .work-list li { position: relative; padding-left: 2.2ch; }
+  .work-list li::before { content: "*"; position: absolute; left: 0; color: var(--mute); }
+  .work-list li + li { margin-top: 10px; }
+  .lead { display: none; }
+  /* Phone leads: the same node, dashed run and arrowhead as on desktop. */
+  .mslot .grp::before {
+    content: ""; display: block; width: 11px; height: 56px; margin: 0 auto 36px;
+    background:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 11 11'%3E%3Ccircle cx='5.5' cy='5.5' r='4.5' fill='none' stroke='%237c7c84'/%3E%3C/svg%3E") 50% 0 / 11px 11px no-repeat,
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 11 7'%3E%3Cpath d='M1 1l4.5 5L10 1' fill='none' stroke='%237c7c84'/%3E%3C/svg%3E") 50% 100% / 11px 7px no-repeat,
+      repeating-linear-gradient(var(--mute) 0 3px, transparent 3px 6px) 50% 12px / 1px calc(100% - 20px) no-repeat;
+  }
+  .text { position: static; align-self: stretch; padding: 24px 0 48px; }
+  .links { font-size: 11px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ring, .cursor { animation: none; }
+  .bead { display: none; }
+}
