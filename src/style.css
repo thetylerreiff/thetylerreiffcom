@@ -38,6 +38,11 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 
 #gl { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
 
+/* The 3D layer appears once main.ts has started it (html.gl). Until then it is invisible but
+   keeps its space for layout; without WebGL (html.no-gl) it is removed and the page is text. */
+html:not(.gl) :is(#gl, #leader, .track, .mslot, .look) { visibility: hidden; }
+html.no-gl :is(#gl, #leader, .track, .mslot, .look) { display: none; }
+
 /* Header: the identity block on the left, bracket links on the right. */
 .top { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; padding: 28px var(--gut) 0; line-height: 1.55; text-transform: uppercase; }
 .id { color: var(--hi); font-size: 12px; letter-spacing: .02em; }

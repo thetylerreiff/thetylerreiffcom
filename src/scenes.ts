@@ -165,7 +165,7 @@ function engravedGold(roughness = 0.12): THREE.MeshPhysicalMaterial {
 // with rings rippling outward from it.
 function blob(env: THREE.Texture): Station {
   const { scene, camera } = station(env, 5.65);
-  const geo = weldedSphere(64);
+  const geo = weldedSphere(30);
   const base = Float32Array.from(geo.attributes.position.array);
   const pos = geo.attributes.position as THREE.BufferAttribute;
   const mesh = new THREE.Mesh(geo, goldMaterial(0.1));
