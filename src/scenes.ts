@@ -222,7 +222,7 @@ function blob(env: THREE.Texture): Station {
 // one large ion at its heart, bonded to every corner. It assembles as it scrolls in: the ions
 // drift in from scattered places, then the bonds grow out from the centre.
 function crystal(env: THREE.Texture): Station {
-  const { scene, camera } = station(env, 6.2);
+  const { scene, camera } = station(env, 7.1);
   const group = new THREE.Group();
   const bonds = new THREE.Group();
   const gold = goldMaterial(0.05);
@@ -358,6 +358,9 @@ function signal(env: THREE.Texture): Station {
     top.push(v(-0.25 + Math.sin(k * Math.PI / 2) * 0.25, 1.25 - (1 - Math.cos(k * Math.PI / 2)) * 0.25 - k * 0.6, 0));
   }
   group.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(top), 320, 0.06, 18, false), gold));
+  const cap = new THREE.Mesh(new THREE.SphereGeometry(0.06, 18, 12), gold);
+  cap.position.copy(top[0]);
+  group.add(cap);
   const hub = new THREE.Mesh(new THREE.SphereGeometry(0.13, 40, 28), gold);
   hub.position.set(0, 0.4, 0);
   group.add(hub);

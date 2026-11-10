@@ -63,7 +63,7 @@ function studio(): THREE.Scene {
   return scene;
 }
 
-type Slot = { el: HTMLElement; fig: HTMLElement; tags: HTMLElement[]; station: Station; target?: THREE.WebGLRenderTarget; cell?: number; arrive: number; posed?: boolean };
+type Slot = { el: HTMLElement; fig: HTMLElement; tags: HTMLElement[]; station: Station; target?: THREE.WebGLRenderTarget; cell?: number; arrive: number; res: number; glow: number; posed?: boolean };
 const slots: Slot[] = [...document.querySelectorAll<HTMLElement>(".view")].map((el) => {
   const fig = el.closest("figure") as HTMLElement;
   return {
@@ -71,7 +71,7 @@ const slots: Slot[] = [...document.querySelectorAll<HTMLElement>(".view")].map((
     tags: [...fig.querySelectorAll<HTMLElement>("[data-tag]")],
     station: builders[el.dataset.obj as Kind](env),
     cell: el.dataset.cell ? Number(el.dataset.cell) : undefined,
-    arrive: 0,
+    arrive: 0, res: 0, glow: 1,
   };
 });
 
@@ -127,8 +127,10 @@ function placeTags(slot: Slot, r: DOMRect): void {
     const y = (-tip.y * 0.5 + 0.5) * r.height + r.top - f.top;
     // Keep the whole tag on screen. If that would push it back over its object, hang it from
     // the other side instead, with the tail flipped to match.
-    const minL = 8 - f.left;
-    const maxL = document.documentElement.clientWidth - 8 - f.left - tag.offsetWidth;
+    // On desktop a caption may reach into the gutter but never over the text column.
+    const minL = (wide.matches ? text.getBoundingClientRect().right + 12 : 8) - f.left;
+    const edge = wide.matches ? Math.min(document.documentElement.clientWidth, track.getBoundingClientRect().right + 32) : document.documentElement.clientWidth;
+    const maxL = edge - 8 - f.left - tag.offsetWidth;
     const leftSide = tag.classList.contains("tag-l");
     let want = leftSide ? x - tag.offsetWidth + 14 : x - 14;
     let flip = false;
@@ -136,9 +138,9 @@ function placeTags(slot: Slot, r: DOMRect): void {
       flip = true;
       want = leftSide ? x - 14 : x - tag.offsetWidth + 14;
     }
-    // Phones: the object fills the width, so the mirrored side would land on it. Hang the tag
-    // just above (left tags) or below (right tags) the object itself.
-    if (!wide.matches && flip) {
+    // The mirrored side would land on the object. Hang the tag just above (left tags) or below
+    // (right tags) the object itself.
+    if (flip) {
       tag.classList.remove("flip");
       const left = Math.max(minL, Math.min(x - tag.offsetWidth / 2, maxL));
       const [minY, maxY] = extent(slot, r, f);
@@ -198,8 +200,8 @@ const track = document.querySelector<HTMLElement>(".track")!;
 const text = document.querySelector<HTMLElement>(".text")!;
 const groups = [...track.querySelectorAll<HTMLElement>(".grp")];
 const leads = [...track.querySelectorAll<HTMLElement>(".lead")];
-const wide = window.matchMedia("(min-width: 861px)");
-const GAP = 80;
+const wide = window.matchMedia("(min-width: 1201px)");
+const GAP = 104;
 function layout(): void {
   groups.forEach((g) => { g.style.top = ""; });
   leads.forEach((l) => { l.style.top = ""; l.style.height = ""; });
@@ -234,6 +236,10 @@ function guide(): void {
   }
   // At the very bottom the page rests on the coin: light the contact line.
   if (on && window.scrollY >= document.documentElement.scrollHeight - window.innerHeight - 4) best = groups[groups.length - 1];
+  const at = best ? groups.indexOf(best) : -1;
+  leads.forEach((l, i) => l.classList.toggle("full", i < at));
+  // Phones: a wire turns gold once its object has come up the screen.
+  groups.forEach((g) => g.classList.toggle("fed", !on && g.getBoundingClientRect().top < mid * 1.3));
   const id = best?.dataset.topic;
   text.querySelectorAll(".topic").forEach((el) => el.classList.toggle("current", el.id === id));
   current = best && id ? { passage: document.getElementById(id)!, group: best } : undefined;
@@ -332,8 +338,8 @@ wide.addEventListener("change", layout);
 const cell = (w: number) => Math.max(3, Math.min(5, Math.round(w / 90)));
 const dither = new THREE.ShaderMaterial({
   glslVersion: THREE.GLSL3,
-  transparent: true,
-  uniforms: { map: { value: null }, size: { value: new THREE.Vector2() } },
+  transparent: true, depthTest: false, depthWrite: false,
+  uniforms: { map: { value: null }, size: { value: new THREE.Vector2() }, cut: { value: -1 } },
   vertexShader: /* glsl */ `
     out vec2 vUv;
     void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }
@@ -341,6 +347,7 @@ const dither = new THREE.ShaderMaterial({
   fragmentShader: /* glsl */ `
     uniform sampler2D map;
     uniform vec2 size;
+    uniform float cut;
     in vec2 vUv;
     out vec4 outColor;
     const float bayer[16] = float[16](0., 8., 2., 10., 12., 4., 14., 6., 3., 11., 1., 9., 15., 7., 13., 5.);
@@ -349,9 +356,11 @@ const dither = new THREE.ShaderMaterial({
       vec2 px = floor(vUv * size);
       vec4 c = texture(map, (px + .5) / size);
       if (c.a < .5) discard;
+      float th = (bayer[int(mod(px.y, 4.)) * 4 + int(mod(px.x, 4.))] + .5) / 16.;
+      // Above the cut the pixels have given way to chrome; the dither pattern frays the edge.
+      if (1. - (px.y + .5) / size.y < cut + (th - .5) * .16) discard;
       vec3 col = c.rgb / (1. + c.rgb);
       float lum = pow(dot(col, vec3(.299, .587, .114)), 1. / 2.2);
-      float th = (bayer[int(mod(px.y, 4.)) * 4 + int(mod(px.x, 4.))] + .5) / 16.;
       float v = clamp(lum * 1.25, 0., 1.) * 3.;
       int i = int(min(floor(v) + step(th, fract(v)), 3.));
       outColor = vec4(golds[i], 1.);
@@ -381,6 +390,7 @@ buttons.forEach((b) => b.addEventListener("click", () => setLook(b.dataset.look 
 setLook(look);
 
 const still = window.matchMedia("(prefers-reduced-motion: reduce)");
+const ring = document.querySelector<SVGElement>(".ring");
 let t = 0;
 let last = performance.now();
 
@@ -389,13 +399,20 @@ function frame(now: number): void {
   requestAnimationFrame(frame);
   frameNo++;
   const dt = Math.min(now - last, 100) / 1000;
+  const real = Math.min(now - last, 1000) / 1000; // wall time, so a slow frame cannot stall a dissolve
   if (!still.matches) t += Math.min(dt, 0.05);
   last = now;
 
   const w = document.documentElement.clientWidth;
   const h = window.innerHeight;
   const size = renderer.getSize(new THREE.Vector2());
-  if (size.x !== w || size.y !== h) renderer.setSize(w, h, false);
+  if (size.x !== w || size.y !== h) {
+    renderer.setSize(w, h, false);
+    canvas.style.height = `${h}px`;
+  }
+  // Pin the canvas to the scroll position this frame is drawn for. Scrolling runs ahead of
+  // drawing; this way the picture moves with the page until the next frame catches up.
+  canvas.style.transform = `translate3d(0, ${window.scrollY}px, 0)`;
 
   renderer.setScissorTest(false);
   renderer.setRenderTarget(null);
@@ -403,6 +420,9 @@ function frame(now: number): void {
   renderer.setScissorTest(true);
 
   drawLeader();
+  // The career ring drifts, and turns with the scroll: the years go by as the story does.
+  if (ring && !still.matches) ring.style.transform = `rotate(${(-(t * 4 + window.scrollY * 0.1)).toFixed(2)}deg)`;
+  const end = document.documentElement.scrollHeight - h - window.scrollY;
   for (const slot of slots) {
     const r = slot.el.getBoundingClientRect();
     if (r.width === 0 || r.bottom < 0 || r.top > h || r.right < 0 || r.left > w) continue;
@@ -420,12 +440,27 @@ function frame(now: number): void {
     const y = h - r.bottom;
     placeTags(slot, r);
 
-    if (look === "chrome") {
+    // The pipeline lights the object it has reached; the others sit back a little. Not in the
+    // pixel look, where less light dithers to brown speckle (and the hero is lit harder for it).
+    const lit = !current || look === "pixel" ? 1 : current.group.contains(slot.el) ? 1.1 : 0.88;
+    slot.glow = still.matches ? lit : slot.glow + (lit - slot.glow) * (1 - Math.exp(-dt * 4));
+    scene.environmentIntensity = slot.glow * (look === "pixel" && slot === blobSlot ? 2.2 : 1);
+
+    // Chrome look: every object arrives as raw pixels and, once its top is well into view,
+    // dissolves into chrome from the top down over about a second. The hero does it as the page
+    // loads. Once refined it stays refined, however the reader scrolls.
+    const want = slot.res === 1 || r.top < h * 0.8 || end < 4 ? 1 : 0;
+    slot.res = look === "pixel" ? 0 : still.matches ? 1 : slot.res + (want - slot.res) * (1 - Math.exp(-real * 2.4));
+    if (slot.res > 0.995) slot.res = 1;
+    const cut = slot.res * 1.16 - 0.08;
+    const chromeRows = Math.round(r.height * Math.min(1, Math.max(0, cut + 0.08)));
+    const chrome = (): void => {
       renderer.setViewport(r.left, y, r.width, r.height);
-      renderer.setScissor(r.left, y, r.width, r.height);
+      renderer.setScissor(r.left, y + r.height - chromeRows, r.width, chromeRows);
       renderer.render(scene, camera);
-      continue;
-    }
+    };
+    if (slot.res === 1) { chrome(); continue; }
+
 
     const px = slot.cell ?? cell(r.width);
     const tw = Math.max(1, Math.round(r.width / px));
@@ -443,11 +478,16 @@ function frame(now: number): void {
 
     renderer.setRenderTarget(null);
     renderer.setScissorTest(true);
+    if (chromeRows > 0) chrome();
     renderer.setViewport(r.left, y, r.width, r.height);
     renderer.setScissor(r.left, y, r.width, r.height);
     dither.uniforms.map.value = slot.target.texture;
     (dither.uniforms.size.value as THREE.Vector2).set(tw, th);
+    dither.uniforms.cut.value = cut;
+    // Drawn over the chrome already there, so this pass must not clear it.
+    renderer.autoClear = false;
     renderer.render(quadScene, quadCam);
+    renderer.autoClear = true;
   }
 }
 requestAnimationFrame(frame);
